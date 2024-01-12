@@ -4,6 +4,9 @@ from torchtext.vocab import build_vocab_from_iterator
 from torchtext.data.utils import get_tokenizer
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import torchvision.transforms as transforms
+import pandas as pd
+
 
 
 # Setting Dataset Path here 
@@ -12,78 +15,67 @@ dataset_path_img = r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\Im
 
 
 # build the vocabulary from the captions
+# vocab_saved = torch.load('vocabulary.pth')
 def build_vocabulary(caption_list):
-    tokenized_captions = []
+
     # create tokenizer
     tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
 
-    # store tokens in a list of list
-    for caption in caption_list:
-        for word in tokenizer(caption.lower()):
-            tokenized_captions.append(word)
+    
+    # Instead of appending each word individually, use list comprehension
+    # if os.path.exists('tokenized_captions.pth'):
+    #     tokenized_captions = torch.load('tokenized_captions.pth')
+    # else:
+    tokenized_captions = [word for caption in caption_list for word in tokenizer(caption.lower())]
+        # torch.save(tokenized_captions, 'tokenized_captions.pth')
     
     # return iterator          
     def yield_tokens(tokenized_captions):
         for word in tokenized_captions:
-            yield word    
+            yield word
     
     # build vocabulary  
-    vocab = build_vocab_from_iterator([yield_tokens(tokenized_captions)], specials=["<pad>", "<start>", "<end>", "<unk>"])
+    # if os.path.exists('vocabulary.pth'):
+    #     vocab = torch.load('vocabulary.pth')
+    # else:
+    vocab = build_vocab_from_iterator([yield_tokens(tokenized_captions)], specials=["<pad>", "<start>", "<end>", "<unk>"], min_freq=5)
+        # torch.save(vocab, 'vocabulary.pth')
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     vocab = vocab.to(device)
 
-    # string to index and index to string (don't use)
-    stoi = {word: idx for word, idx in enumerate(vocab.get_stoi())}
-    itos = {idx: word for idx, word in enumerate(vocab.get_itos())}
     return vocab
 
-# Create Dataset
-class FlickrDataset(Dataset):
-    def __init__(self, image_directory, captions_file, captions_dict, transform):
-        self.image_directory = image_directory
-        self.captions_dict = captions_dict
-        with open(captions_file) as f:
-            self.captions = f.read().splitlines()
-        self.image_filenames = os.listdir(self.image_directory)
-        self.transform = transform
-        self.vocab = build_vocabulary(self.captions)
 
-    def __len__(self):
-        return len(self.image_filenames)
-
-    def __getitem__(self, idx):
-        image_filename = self.image_filenames[idx]
-        image_path = os.path.join(self.image_directory, image_filename)
-
-        # Load image
-        img = Image.open(image_path).convert("RGB")
-
-        # Apply transformations if specified
-        if self.transform is not None:
-            img = self.transform(img)
-
-        # Get corresponding captions
-        captions = self.captions_dict[image_filename]
-        captions = '<start> ' + ' '.join(captions) + ' <end>'
-        captions, _ = convert_tokens(captions)
-        return img, torch.tensor(captions)
+def convert_tokens(captions_raw, vocab, tokenizer):
+    '''
+    Converts raw text captions to indexed tokens using a vocabulary.
+    Takes a list of raw text captions, tokenizes each caption using spaCy,
+    adds start and end tokens to each caption, and looks up the index of each token in the vocabulary.
+    Returns a list of caption token indexes.
+    '''
+    # Pre-allocate a list for all tokenized captions to avoid growing the list dynamically
+    all_tokens = [['<start>'] + tokenizer(caption.lower()) + ['<end>'] for caption in captions_raw]
     
+    # Flatten the list of tokens to look up each token index in the vocabulary only once
+    flat_tokens = [token for tokens in all_tokens for token in tokens]
+    token_indices = [vocab.get_stoi()[token] for token in flat_tokens]
+    
+    # Reconstruct the list of captions from the flat list of indices
+    # Keep track of the current position in the flat list
+    current_position = 0
+    captions_indexed = []
+    for tokens in all_tokens:
+        caption_length = len(tokens)
+        # Slice the flat list of indices to get the indices for the current caption
+        caption_indices = token_indices[current_position:current_position + caption_length]
+        captions_indexed.append(caption_indices)
+        current_position += caption_length
+    
+    return captions_indexed
 
-# padding the images to be of the same length
-class MyCollate:
-    def __init__(self, pad_index):
-        self.pad_index = pad_index
 
-    def __call__(self, batch):
-        images = [item[0].unsqueeze(0) for item in batch]
-        images = torch.cat(images, dim=0)
-        targets = torch.tensor([item[1] for item in batch])
-        targets = pad_sequence(targets, batch_first=False, padding_value=self.pad_index)
-
-        return images, targets
-
-
-def convert_tokens(captions_raw):
+def convert_tokens_old(captions_raw, vocab, tokenizer):
     '''
     Converts raw text captions to indexed tokens using a vocabulary\n
     Takes a list of raw text captions.
@@ -93,23 +85,76 @@ def convert_tokens(captions_raw):
     Returns a list of caption token indexes and the vocabulary\n
     '''
     captions = []
-    tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+    # tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
     # convert raw tokens to indexes
-    vocabulary = build_vocabulary(captions_raw)
-    stoi = vocabulary.get_stoi()
+    vocabulary = vocab
     for caption in captions_raw:
         temp = []
         tokens = ['<start>'] + tokenizer(caption.lower()) + ['<end>']
         for token in tokens:
-            temp.append(stoi[token])
+            temp.append(vocabulary.get_stoi()[token])
         captions.append(temp)
     return captions, vocabulary
+
+
+
+# Create Dataset
+class FlickrDataset(Dataset):
+    def __init__(self, image_directory, captions_file, transform=None):
+        self.image_directory = image_directory
+        self.transform = transform
+        self.df = pd.read_csv(captions_file)
+        self.imgs = self.df["image"].to_list()
+        self.tokenizer_eng = get_tokenizer('spacy', language='en_core_web_sm')
+        self.captions = self.df["caption"].to_list()
+        # if os.path.exists('vocabulary.pth'):
+        #     self.vocab = torch.load('vocabulary.pth')
+        # else:
+        self.vocab = build_vocabulary(self.df.caption.to_list())
+        self.stoi = self.vocab.get_stoi()
+
+    
+    def convert(self, caption):
+        # tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+        # convert raw tokens to indexes
+        tokens = ['<start>'] + self.tokenizer_eng(caption.lower()) + ['<end>']
+        return [self.stoi['<start>']] + [self.stoi[token] if token in self.stoi else self.stoi["<unk>"] for token in self.tokenizer_eng(caption.lower())] + [self.stoi['<end>']]
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        caption = self.captions[idx]
+        img_id = self.imgs[idx]
+        img = Image.open(os.path.join(self.image_directory, img_id)).convert("RGB")
+
+        # Apply transformations if specified
+        if self.transform is not None:
+            img = self.transform(img)
+
+        # Get corresponding captions
+        captions = self.convert(caption)
+        return img, torch.tensor(captions)
+
+# padding the images to be of the same length
+class MyCollate:
+    def __init__(self, pad_index):
+        self.pad_index = pad_index
+
+    def __call__(self, batch):
+        images = [item[0].unsqueeze(0) for item in batch]
+        images = torch.cat(images, dim=0)
+        targets = [item[1] for item in batch]
+        targets = pad_sequence(targets, batch_first=False, padding_value=self.pad_index)
+
+        return images, targets
+
+
 
 
 def get_loader(
         image_directory,
         annotation_file,
-        captions_dict,
         transform,
         batch_size=32,
         num_workers=8,
@@ -133,17 +178,17 @@ def get_loader(
           loader: DataLoader for the dataset.
           dataset: The FlickrDataset instance.
     '''
-    dataset = FlickrDataset(image_directory, annotation_file, captions_dict, transform=transform)
+    dataset = FlickrDataset(image_directory, annotation_file, transform=transform)
 
-    pad_index = dataset.vocab.get_stoi()["<pad>"]
+    pad_index = dataset.stoi["<pad>"]
 
     loader = DataLoader(
         dataset=dataset,
         batch_size=batch_size,
         num_workers=num_workers,
         shuffle=shuffle,
-        pin_memory=False,
-        # collate_fn=MyCollate(pad_index=pad_index),
+        pin_memory=pin_memory,
+        collate_fn=MyCollate(pad_index=pad_index),
     )
     return loader, dataset
 

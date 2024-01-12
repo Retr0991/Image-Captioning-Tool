@@ -7,9 +7,8 @@ class EncoderCNN(nn.Module):
     def __init__(self, embed_size, train_CNN=False):
         super(EncoderCNN, self).__init__()
         self.train_CNN=train_CNN
-        self.inception=models.vgg16()
-        self.inception=nn.Sequential(*(list(self.inception.children())[:-1])) #Removing last CNN layer
-        self.inception.fc=nn.Linear(512*7*7,embed_size) #Replacing last CNN layer with Linear layer
+        self.inception=models.resnet50()   # Resnet 50
+        self.inception.fc=nn.Linear(self.inception.fc.in_features, embed_size) #Removing last CNN layer
         self.relu=nn.ReLU()
         self.dropout=nn.Dropout(0.5)
         
@@ -62,7 +61,7 @@ class CNNtoRNN(nn.Module):
                 result_caption.append(predicted.item())
                 x = self.decoderRNN.embed(predicted).unsqueeze(0)
 
-                if vocabulary.itos[predicted.item()] == "<EOS>":
+                if vocabulary.get_itos()[predicted.item()] == "<end>":
                     break
 
-        return [vocabulary.itos[idx] for idx in result_caption]
+        return [vocabulary.get_itos()[idx] for idx in result_caption]
