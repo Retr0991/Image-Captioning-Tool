@@ -8091,3 +8091,8 @@ dataset/Images/3760400645_3ba51d27f9.jpg
 dataset/Images/3765374230_cb1bbee0cb.jpg
 dataset/Images/3767841911_6678052eb6.jpg
 dataset/captions.txt
+__pycache__/app.cpython-310.pyc
+__pycache__/caption_processing.cpython-310.pyc
+__pycache__/final.cpython-310.pyc
+__pycache__/model.cpython-310.pyc
+__pycache__/wsgi.cpython-310.pyc

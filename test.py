@@ -23,13 +23,11 @@ def load_checkpoint(checkpoint, model, optimizer):
 
 
 test_loader, dataset = get_loader(
-    image_directory=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\Images',
-    annotation_file=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\captions.txt',
     transform=transform,
     num_workers=8,
 )
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+torch.save(dataset.vocab, 'vocab.pth')
 model = CNNtoRNN(256, 256, len(dataset.vocab), 1).to(device)
 optimizer = optim.Adam(model.parameters(), lr=3e-4)
 checkpoint = load_checkpoint(torch.load("checkpoint/model_checkpoint.pth.tar", map_location=device), model, optimizer)

@@ -10,8 +10,8 @@ import pandas as pd
 
 
 # Setting Dataset Path here 
-dataset_path_ann = r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\captions.txt'
-dataset_path_img = r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\Images'
+dataset_path_ann = os.path.join(os.path.dirname(__name__), 'dataset\captions.txt')
+dataset_path_img = os.path.join(os.path.dirname(__name__), 'dataset\Images')
 
 
 # build the vocabulary from the captions
@@ -153,9 +153,9 @@ class MyCollate:
 
 
 def get_loader(
-        image_directory,
-        annotation_file,
         transform,
+        image_directory=dataset_path_img,
+        annotation_file=dataset_path_ann,
         batch_size=32,
         num_workers=8,
         shuffle=True,

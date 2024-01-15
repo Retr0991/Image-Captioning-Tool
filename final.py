@@ -1,9 +1,8 @@
 import torch
 import torch.optim as optim
 from model import CNNtoRNN
-from caption_processing import get_loader
 import torchvision.transforms as transforms
-from PIL import Image
+import os
 
 transform = transforms.Compose(
     [
@@ -17,26 +16,20 @@ def load_checkpoint(checkpoint, model, optimizer):
     step = checkpoint["step"]
     return step
 
-
-test_loader, dataset = get_loader(
-    image_directory=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\Images',
-    annotation_file=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\captions.txt',
-    transform=transform,
-    num_workers=8,
-)
+vocab = torch.load('vocab.pth')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = CNNtoRNN(256, 256, len(dataset.vocab), 1).to(device)
+model = CNNtoRNN(256, 256, len(vocab), 1).to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-4)
 checkpoint = load_checkpoint(torch.load("checkpoint/model_checkpoint.pth.tar", map_location=device), model, optimizer)
 model.eval()
 
 
-test_image_path = r"C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\test_images\img\new.jpg"
+test_image_path = os.path.join(os.path.dirname(__name__), 'test_images/img/new.jpg')
 # final.py
 
 def final(img):
-    caption = model.caption_image(img.to(device), dataset.vocab)
+    caption = model.caption_image(img.to(device), vocab)
     return " ".join(caption)
 
 

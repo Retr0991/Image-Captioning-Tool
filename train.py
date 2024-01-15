@@ -21,8 +21,6 @@ def train():
     )
 
     train_loader, dataset = get_loader(
-        image_directory=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\Images',
-        annotation_file=r'C:\Users\Retr0991\ML stuf\Project_IEEEMegaProj23\dataset\captions.txt',
         transform=transform
     )
 
