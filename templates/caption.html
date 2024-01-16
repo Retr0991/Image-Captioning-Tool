@@ -6,7 +6,12 @@
     <title>Image Caption Generator</title>
     <link rel="stylesheet" href="{{url_for('static', filename='caption.css')}}">
 </head>
-<body1>
+<body>
+     <div class="navbar">
+        <a href="#home">Home</a>
+        <a href="/first">About Us</a>
+        <a href="/second">About our Project</a>
+    </div>
     <div class="navbar">
     </div>
     <div class="container">
@@ -15,13 +20,13 @@
         <div class="upload">
         <input type="file" id="imageInput" accept="image/*">
         
-    </div>
+    </div> 
+    <div class="sec">
         <img id="selectedImage" alt="Choose Your Image">
         <div class="loading-spinner hidden" id="loadingSpinner"></div>
-        
         <div class="button-section">
         <button id="generateCaption">Generate Caption</button>
-        <button id="reset" class="reset-btn">Reset</button>
+        <button id="reset" class="button, btn">Reset</button>
         </div>
         <p id="captionResult"></p>
     </div>

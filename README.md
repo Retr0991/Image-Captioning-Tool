@@ -13,9 +13,9 @@ For Decoder we use LSTM. Long Short-Term Memory (LSTM) networks are a modified v
 
 ## Developers
 
-   1> Shouryaman Singh
+   1> Rahul Jha
    
-   2> Rahul Jha
+   2> Shouryaman Singh
    
    3> Hritabhash Ray
 ## Final Deployed Model
