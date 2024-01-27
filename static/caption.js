@@ -48,5 +48,5 @@ function reset() {
     image.src = ""; 
     image.classList.add('hidden');
     result.innerText = "";
-    loadingSpinner.classList.add('hidden'); // Hide loading spinner when resetting.
+    loadingSpinner.classList.add('hidden'); 
 }
