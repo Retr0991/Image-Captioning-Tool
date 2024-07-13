@@ -22,7 +22,7 @@ For Decoder we use LSTM. Long Short-Term Memory (LSTM) networks are a modified v
 
 Users can upload the images & the model predicts a caption depicting the image.
 
-https://thalaforareason-07fe8a184816.herokuapp.com/
+https://thala-yl23.onrender.com
 
 The above URL can be used to try out the model.
 
